@@ -1,6 +1,7 @@
 package com.enamorado.restclienttesting;
 
 import com.enamorado.restclienttesting.model.Pokemon;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -13,9 +14,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 
 @SpringBootApplication
 public class RestClientTestingApplication implements CommandLineRunner {
+
+    @Value("${restclient.read-timeout-ms:3000}")
+    private int readTimeoutMs;
 
     // Springs older synchronous http client
     private final RestTemplate restTemplate;
@@ -52,18 +57,13 @@ public class RestClientTestingApplication implements CommandLineRunner {
     }
 
     private void callRestTemplate() {
-        System.out.println("Calling RestTemplate...");
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Accept", "application/json");
-        headers.set("User-Agent", "RestClientTesting/1.0");
-
-        HttpEntity<String> requestEntity = new HttpEntity<>(headers);
+        System.out.println("\nCalling RestTemplate...");
 
 
         ResponseEntity<Pokemon> response = restTemplate.exchange(
                 "https://pokeapi.co/api/v2/pokemon/ditto",
                 HttpMethod.GET,
-                requestEntity,
+                null,
                 Pokemon.class
         );
 
@@ -72,12 +72,10 @@ public class RestClientTestingApplication implements CommandLineRunner {
     }
 
     private void callRestClient() {
-        System.out.println("Calling RestClient...");
+        System.out.println("\nCalling RestClient...");
 
         ResponseEntity<Pokemon> response = restClient.get()
                 .uri("https://pokeapi.co/api/v2/pokemon/ditto")
-                .header("Accept", "application/json")
-                .header("User-Agent", "RestClientTesting/1.0")
                 .retrieve()
                 .toEntity(Pokemon.class);
 
@@ -86,27 +84,26 @@ public class RestClientTestingApplication implements CommandLineRunner {
     }
 
     private void callWebClient(){
-        System.out.println("Calling WebClient...");
+        System.out.println("\nCalling WebClient...");
 
         ResponseEntity<Pokemon> response = webClient.get()
                 .uri("https://pokeapi.co/api/v2/pokemon/ditto")
-                .header("Accept", "application/json")
-                .header("User-Agent", "RestClientTesting/1.0")
                 .retrieve()
                 .toEntity(Pokemon.class)
                 .block();
 
         System.out.println("Status code: " + response.getStatusCode());
-        System.out.println("Pokemon via RestClient: " + response.getBody());
+        System.out.println("Pokemon via WebClient: " + response.getBody());
     }
 
     private void callHttpClient() throws Exception{
-        System.out.println("Calling HttpClient...");
+        System.out.println("\nCalling HttpClient...");
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://pokeapi.co/api/v2/pokemon/ditto"))
                 .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .header(HttpHeaders.USER_AGENT, "RestClientTesting/1.0")
+                .timeout(Duration.ofMillis(readTimeoutMs))
                 .GET()
                 .build();
 
